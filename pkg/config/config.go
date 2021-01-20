@@ -9,6 +9,7 @@ import (
 // From https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_devcontainerjson-properties
 
 type DevContainer struct {
+	Name            string            `json:"name"`
 	Image           string            `json:"image"`
 	Dockerfile      string            `json:"dockerfile"`
 	Context         string            `json:"context"`
@@ -24,6 +25,7 @@ type DevContainer struct {
 	RunArgs         []string          `json:"runArgs"`
 	OverrideCommand bool              `json:"overrideCommand"`
 	ShutdownAction  ShutdownAction    `json:"shutdownAction"`
+	ExecCommand     []string          `json:"execCommand"`
 }
 
 type DevContainerBuild struct {
@@ -52,19 +54,28 @@ func (sa *ShutdownAction) UnmarshalJSON(b []byte) error {
 	return errors.New("Invalid ShutdownAction option")
 }
 
+const (
+	DefaultImage           = "stuartwarren/localpod-base:latest"
+	DefaultWorkspaceMount  = "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+	DefaultWorkspaceFolder = "/workspace"
+	DefaultRemoteUser      = "dev"
+	DefaultContainerUser   = "root"
+)
+
 func DefaultDevContainer() DevContainer {
 	return DevContainer{
-		Image:           "stuartwarren/localpod-base:latest",
+		Image:           DefaultImage,
 		ContainerEnv:    map[string]string{},
 		RemoteEnv:       map[string]string{},
-		ContainerUser:   "root",
-		RemoteUser:      "dev",
+		ContainerUser:   DefaultContainerUser,
+		RemoteUser:      DefaultRemoteUser,
 		Mounts:          []string{},
-		WorkspaceMount:  "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-		WorkspaceFolder: "/workspace",
+		WorkspaceMount:  DefaultWorkspaceMount,
+		WorkspaceFolder: DefaultWorkspaceFolder,
 		RunArgs:         []string{},
 		OverrideCommand: true,
 		ShutdownAction:  StopContainer,
+		ExecCommand:     []string{"/bin/sh"},
 	}
 }
 

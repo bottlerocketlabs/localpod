@@ -27,7 +27,8 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	}
 	env.Set("localWorkspaceFolder", wd)
 	var (
-		cfg *config.DevContainer
+		cfg           *config.DevContainer
+		containerName = "localpod1"
 	)
 	dotConfig := path.Join(wd, ".devcontainer.json")
 	_, err = os.Stat(dotConfig)
@@ -50,10 +51,20 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if !docker.HasDocker() {
 		return fmt.Errorf("could not find 'docker' on PATH")
 	}
-	container, err := docker.CreateContainer(env, cfg)
+	// TODO: check if container already exists
+	container, err := docker.CreateContainer(containerName, env, cfg)
 	if err != nil {
 		return fmt.Errorf("could not create container: %w", err)
 	}
-	fmt.Printf("created container ID: %s", container.ID)
+	fmt.Printf("DEBUG: created container: %s", container.Name)
+	err = container.Start()
+	if err != nil {
+		return fmt.Errorf("could not start container: %w", err)
+	}
+	err = container.Exec(stdin, stdout, stderr)
+	if err != nil {
+		return fmt.Errorf("could not exec container: %w", err)
+	}
+	// TODO: run shutdownAction
 	return nil
 }

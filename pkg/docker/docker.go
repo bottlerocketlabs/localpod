@@ -2,10 +2,17 @@ package docker
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 
 	"github.com/stuart-warren/localpod/pkg/config"
+)
+
+const (
+	DefaultContainerEntrypoint = "/bin/sh"
+	DefaultContainerCommand    = "echo Container started ; trap \"exit 0\" 15; while sleep 1 & wait $!; do :; done"
+	DefaultContainerHostname   = "localpod"
 )
 
 func HasDocker() bool {
@@ -18,6 +25,7 @@ func HasDocker() bool {
 
 type Container struct {
 	ID     string
+	Name   string
 	Config *config.DevContainer
 	Args   []string
 }
@@ -48,11 +56,12 @@ func expandEnvArgs(args []string, env config.Env) []string {
 	return out
 }
 
-func buildArgs(command string, cfg *config.DevContainer) []string {
+func buildArgs(command string, name string, cfg *config.DevContainer) []string {
 	var args []string
 	args = append(args, command)
 	args = append(args, "--tty", "--interactive")
-	args = append(args, "--hostname", "localpod")
+	args = append(args, "--name", name)
+	args = append(args, "--hostname", DefaultContainerHostname)
 	args = append(args, "--user", cfg.ContainerUser)
 	args = append(args, envToDockerArgs(cfg.ContainerEnv)...)
 	args = append(args, mountsToDockerArgs(cfg.Mounts)...)
@@ -61,19 +70,20 @@ func buildArgs(command string, cfg *config.DevContainer) []string {
 	}
 	args = append(args, cfg.RunArgs...)
 	if cfg.OverrideCommand {
-		args = append(args, "--entrypoint", "/bin/sh")
+		args = append(args, "--entrypoint", DefaultContainerEntrypoint)
 	}
 	args = append(args, cfg.Image) // Image
 	if cfg.OverrideCommand {
-		args = append(args, "-c", "'while sleep 1000; do :; done'")
+		args = append(args, "-c", DefaultContainerCommand)
 	}
 	return args
 }
 
-func CreateContainer(env config.Env, cfg *config.DevContainer) (Container, error) {
+func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Container, error) {
 	c := Container{
-		Args:   expandEnvArgs(buildArgs("create", cfg), env),
+		Args:   expandEnvArgs(buildArgs("create", name, cfg), env),
 		Config: cfg,
+		Name:   name,
 	}
 	fmt.Printf("DEBUG: args: %v\n", c.Args)
 	out, err := exec.Command("docker", c.Args...).Output()
@@ -82,4 +92,26 @@ func CreateContainer(env config.Env, cfg *config.DevContainer) (Container, error
 	}
 	c.ID = string(out)
 	return c, nil
+}
+
+func (c *Container) Start() error {
+	_, err := exec.Command("docker", "start", c.Name).Output()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
+}
+
+func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
+	args := []string{"exec", "--tty", "--interactive"}
+	args = append(args, c.Config.ExecCommand...)
+	cmd := exec.Command("docker", args...)
+	cmd.Stderr = stderr
+	cmd.Stdout = stdout
+	cmd.Stdin = stdin
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
 }

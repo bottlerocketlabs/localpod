@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -27,7 +28,6 @@ type Container struct {
 	ID     string
 	Name   string
 	Config *config.DevContainer
-	Args   []string
 }
 
 func envToDockerArgs(env map[string]string) []string {
@@ -81,17 +81,44 @@ func buildArgs(command string, name string, cfg *config.DevContainer) []string {
 
 func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Container, error) {
 	c := Container{
-		Args:   expandEnvArgs(buildArgs("create", name, cfg), env),
 		Config: cfg,
 		Name:   name,
 	}
-	fmt.Printf("DEBUG: args: %v\n", c.Args)
-	out, err := exec.Command("docker", c.Args...).Output()
+	existingID, err := c.Exists(name)
+	c.ID = existingID
+	if err == nil {
+		fmt.Printf("DEBUG: container already exists\n")
+		return c, nil
+	}
+	fmt.Printf("DEBUG: inpect: %s\n", err)
+	args := expandEnvArgs(buildArgs("create", name, cfg), env)
+	fmt.Printf("DEBUG: args for create: %v\n", args)
+	out, err := exec.Command("docker", args...).Output()
 	if err != nil {
 		return c, fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
 	}
 	c.ID = string(out)
 	return c, nil
+}
+
+type containerInspect struct {
+	ID string `json:"Id"`
+}
+
+func (c *Container) Exists(name string) (string, error) {
+	out, err := exec.Command("docker", "inspect", name).Output()
+	if err != nil {
+		return "", fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	var inspect []containerInspect
+	err = json.Unmarshal(out, &inspect)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal failed: %w", err)
+	}
+	if len(inspect) != 1 {
+		return "", fmt.Errorf("unexpected number of inspect entries: %d", len(inspect))
+	}
+	return inspect[0].ID, nil
 }
 
 func (c *Container) Start() error {
@@ -103,8 +130,9 @@ func (c *Container) Start() error {
 }
 
 func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
-	args := []string{"exec", "--tty", "--interactive"}
+	args := []string{"exec", "--tty", "--interactive", c.Name}
 	args = append(args, c.Config.ExecCommand...)
+	fmt.Printf("DEBUG: args for exec: %v\n", args)
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = stderr
 	cmd.Stdout = stdout

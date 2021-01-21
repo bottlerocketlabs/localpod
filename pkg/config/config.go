@@ -13,7 +13,7 @@ type DevContainer struct {
 	Image           string            `json:"image"`
 	Dockerfile      string            `json:"dockerfile"`
 	Context         string            `json:"context"`
-	Build           DevContainerBuild `json:"build"`
+	Build           DevContainerBuild `json:"build,omitempty"`
 	AppPort         []string          `json:"appPort"`
 	ContainerEnv    map[string]string `json:"containerEnv"`
 	RemoteEnv       map[string]string `json:"remoteEnv"`
@@ -55,6 +55,7 @@ func (sa *ShutdownAction) UnmarshalJSON(b []byte) error {
 }
 
 const (
+	DefaultName            = "localpod"
 	DefaultImage           = "stuartwarren/localpod-base:latest"
 	DefaultWorkspaceMount  = "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
 	DefaultWorkspaceFolder = "/workspace"
@@ -64,6 +65,7 @@ const (
 
 func DefaultDevContainer() DevContainer {
 	return DevContainer{
+		Name:            DefaultName,
 		Image:           DefaultImage,
 		ContainerEnv:    map[string]string{},
 		RemoteEnv:       map[string]string{},

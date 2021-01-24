@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,6 +24,11 @@ func main() {
 
 // Run is the main thread but separated out so easier to test
 func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	err := flags.Parse(args[1:])
+	if err != nil {
+		return err
+	}
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("could not get current working directory: %w", err)

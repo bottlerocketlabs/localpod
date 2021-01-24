@@ -65,10 +65,19 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if err != nil {
 		return fmt.Errorf("could not start container: %w", err)
 	}
+	err = container.Setup()
+	if err != nil {
+		return fmt.Errorf("could not setup container: %w", err)
+	}
 	err = container.Exec(stdin, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("could not exec container: %w", err)
 	}
-	// TODO: run shutdownAction
+	if container.Config.ShutdownAction == config.StopContainer {
+		err := container.Stop()
+		if err != nil {
+			return fmt.Errorf("could not stop container: %w", err)
+		}
+	}
 	return nil
 }

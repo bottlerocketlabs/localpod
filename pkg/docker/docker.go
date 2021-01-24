@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"text/template"
 
 	"github.com/stuart-warren/localpod/pkg/config"
 )
@@ -56,9 +58,9 @@ func expandEnvArgs(args []string, env config.Env) []string {
 	return out
 }
 
-func buildArgs(command string, name string, cfg *config.DevContainer) []string {
+func buildCreateArgs(name string, cfg *config.DevContainer) []string {
 	var args []string
-	args = append(args, command)
+	args = append(args, "create")
 	args = append(args, "--tty", "--interactive")
 	args = append(args, "--name", name)
 	args = append(args, "--hostname", DefaultContainerHostname)
@@ -68,6 +70,7 @@ func buildArgs(command string, name string, cfg *config.DevContainer) []string {
 	if cfg.WorkspaceMount != "" {
 		args = append(args, "--mount", cfg.WorkspaceMount)
 	}
+	args = append(args, "--workdir", cfg.WorkspaceFolder)
 	args = append(args, cfg.RunArgs...)
 	if cfg.OverrideCommand {
 		args = append(args, "--entrypoint", DefaultContainerEntrypoint)
@@ -91,7 +94,7 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 		return c, nil
 	}
 	fmt.Printf("DEBUG: inpect: %s\n", err)
-	args := expandEnvArgs(buildArgs("create", name, cfg), env)
+	args := expandEnvArgs(buildCreateArgs(name, cfg), env)
 	fmt.Printf("DEBUG: args for create: %v\n", args)
 	out, err := exec.Command("docker", args...).Output()
 	if err != nil {
@@ -121,6 +124,73 @@ func (c *Container) Exists(name string) (string, error) {
 	return inspect[0].ID, nil
 }
 
+var setupScript = `#!/bin/sh
+set -e
+
+adduser --home /home/{{.Username}} --gecos '' --disabled-password {{.Username}} || true
+addgroup sudo || true
+addgroup {{.Username}} sudo || true
+mkdir -p /etc/sudoers.d
+echo "{{.Username}} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/{{.Username}}"
+if command -v apk; then
+	apk add --no-cache sudo
+fi
+if command -v apt-get; then
+	apt-get update && apt-get install -y --no-install-recommends sudo
+fi
+`
+
+type SetupScriptParams struct {
+	Username string
+}
+
+func (c *Container) Setup() error {
+	tmpl, err := template.New("setup").Parse(setupScript)
+	if err != nil {
+		return fmt.Errorf("could not parse setupScript template: %w", err)
+	}
+	tmp := os.TempDir()
+	f, err := os.Create(filepath.Join(tmp, "setup.sh"))
+	if err != nil {
+		return fmt.Errorf("could not create temp file")
+	}
+	defer os.Remove(f.Name())
+	params := SetupScriptParams{
+		Username: c.Config.RemoteUser,
+	}
+	err = tmpl.Execute(f, params)
+	if err != nil {
+		return fmt.Errorf("could not execute setupScript template: %w", err)
+	}
+	f.Sync()
+	_, err = exec.Command("docker", "cp", f.Name(), c.Name+":/tmp/setup.sh").Output()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	args := []string{"chmod", "+x", "/tmp/setup.sh"}
+	err = c.RunCommand(args)
+	if err != nil {
+		return fmt.Errorf("could make setupScript executable: %w", err)
+	}
+	fmt.Printf("DEBUG: preparing container for setup\n")
+	args = []string{"/tmp/setup.sh"}
+	err = c.RunCommand(args)
+	if err != nil {
+		return fmt.Errorf("could run setupScript: %w", err)
+	}
+	return nil
+}
+
+func (c *Container) RunCommand(cmd []string) error {
+	args := []string{"exec", "--tty", "--user", "root", "--workdir", c.Config.WorkspaceFolder, c.Name}
+	args = append(args, cmd...)
+	out, err := exec.Command("docker", args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w - %s | %s", err, err.(*exec.ExitError).Stderr, string(out))
+	}
+	return nil
+}
+
 func (c *Container) Start() error {
 	_, err := exec.Command("docker", "start", c.Name).Output()
 	if err != nil {
@@ -130,7 +200,13 @@ func (c *Container) Start() error {
 }
 
 func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
-	args := []string{"exec", "--tty", "--interactive", c.Name}
+	var args []string
+	args = append(args, "exec")
+	args = append(args, "--tty", "--interactive")
+	args = append(args, envToDockerArgs(c.Config.RemoteEnv)...)
+	args = append(args, "--user", c.Config.RemoteUser)
+	args = append(args, "--workdir", c.Config.WorkspaceFolder)
+	args = append(args, c.Name)
 	args = append(args, c.Config.ExecCommand...)
 	fmt.Printf("DEBUG: args for exec: %v\n", args)
 	cmd := exec.Command("docker", args...)
@@ -138,6 +214,14 @@ func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
 	cmd.Stdout = stdout
 	cmd.Stdin = stdin
 	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
+}
+
+func (c *Container) Stop() error {
+	_, err := exec.Command("docker", "stop", c.Name).Output()
 	if err != nil {
 		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
 	}

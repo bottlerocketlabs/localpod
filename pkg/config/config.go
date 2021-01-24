@@ -3,18 +3,19 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 )
 
 // From https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_devcontainerjson-properties
 
 type DevContainer struct {
-	Name            string            `json:"name"`
-	Image           string            `json:"image"`
-	Dockerfile      string            `json:"dockerfile"`
-	Context         string            `json:"context"`
-	Build           DevContainerBuild `json:"build,omitempty"`
-	AppPort         []string          `json:"appPort"`
+	Name  string `json:"name"`
+	Image string `json:"image"`
+	// Dockerfile      string            `json:"dockerfile"`
+	// Context         string            `json:"context"`
+	// Build           DevContainerBuild `json:"build,omitempty"`
+	// AppPort         []string          `json:"appPort"`
 	ContainerEnv    map[string]string `json:"containerEnv"`
 	RemoteEnv       map[string]string `json:"remoteEnv"`
 	ContainerUser   string            `json:"containerUser"`
@@ -28,12 +29,12 @@ type DevContainer struct {
 	ExecCommand     []string          `json:"execCommand"`
 }
 
-type DevContainerBuild struct {
-	Dockerfile string            `json:"dockerfile"`
-	Context    string            `json:"context"`
-	Args       map[string]string `json:"args"`
-	Target     string            `json:"target"`
-}
+// type DevContainerBuild struct {
+// 	Dockerfile string            `json:"dockerfile"`
+// 	Context    string            `json:"context"`
+// 	Args       map[string]string `json:"args"`
+// 	Target     string            `json:"target"`
+// }
 
 type ShutdownAction string
 
@@ -41,6 +42,14 @@ const (
 	None          ShutdownAction = "none"
 	StopContainer                = "stopContainer"
 )
+
+func BuildEnv(env map[string]string) []string {
+	out := []string{}
+	for k, v := range env {
+		out = append(out, fmt.Sprintf("%s=%q", k, v))
+	}
+	return out
+}
 
 func (sa *ShutdownAction) UnmarshalJSON(b []byte) error {
 	var s string
@@ -56,11 +65,12 @@ func (sa *ShutdownAction) UnmarshalJSON(b []byte) error {
 
 const (
 	DefaultName            = "localpod"
-	DefaultImage           = "stuartwarren/localpod-base:latest"
+	DefaultImage           = "docker.io/stuartwarren/localpod-base:0.1"
 	DefaultWorkspaceMount  = "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
 	DefaultWorkspaceFolder = "/workspace"
 	DefaultRemoteUser      = "dev"
 	DefaultContainerUser   = "root"
+	DefaultExecCommand     = "/bin/sh"
 )
 
 func DefaultDevContainer() DevContainer {
@@ -77,7 +87,7 @@ func DefaultDevContainer() DevContainer {
 		RunArgs:         []string{},
 		OverrideCommand: true,
 		ShutdownAction:  StopContainer,
-		ExecCommand:     []string{"/bin/sh"},
+		ExecCommand:     []string{DefaultExecCommand},
 	}
 }
 

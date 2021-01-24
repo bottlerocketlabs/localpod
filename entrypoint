@@ -1,0 +1,18 @@
+#!/bin/bash
+
+COMMAND="pair"
+[[ ! -z "${1}" ]] && COMMAND="${@}"
+
+set -euxo pipefail
+# bootstrap machine from repo
+DOTFILES_DIR="${HOME}/.dotfiles"
+DOTFILES_REPO="${DOTFILES_REPO:-unset}"
+if [[ "$DOTFILES_REPO" == "unset" ]]; then
+    echo "Please set env var DOTFILES_REPO to a git repo url with an executable /install script"
+    exit 1
+fi
+
+[[ ! -d "${DOTFILES_DIR}" ]] && git clone ${DOTFILES_REPO} ${DOTFILES_DIR}
+${DOTFILES_DIR}/install
+
+tmux new -A -s 1 ${COMMAND}

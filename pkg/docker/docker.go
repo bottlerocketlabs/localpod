@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/stuart-warren/localpod/pkg/config"
+	"github.com/bottlerocketlabs/localpod/pkg/config"
 )
 
 const (

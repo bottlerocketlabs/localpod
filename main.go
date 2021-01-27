@@ -10,8 +10,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/stuart-warren/localpod/pkg/config"
-	"github.com/stuart-warren/localpod/pkg/docker"
+	"github.com/bottlerocketlabs/localpod/pkg/config"
+	"github.com/bottlerocketlabs/localpod/pkg/docker"
 )
 
 // main

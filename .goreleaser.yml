@@ -37,11 +37,11 @@ changelog:
 brews:
 - name: localpod
   tap:
-    owner: stuart-warren
+    owner: bottlerocketlabs
     name: homebrew-apps
     token: "{{ .Env.HOMEBREW_GITHUB_TOKEN }}"
   folder: Formula
-  homepage:  https://github.com/stuart-warren/localpod
+  homepage:  https://github.com/bottlerocketlabs/localpod
   description: A tool help local development environments
   license: MIT
   test: |

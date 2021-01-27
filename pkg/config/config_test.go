@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stuart-warren/localpod/pkg/config"
+	"github.com/bottlerocketlabs/localpod/pkg/config"
 )
 
 func TestGoodEnum(t *testing.T) {

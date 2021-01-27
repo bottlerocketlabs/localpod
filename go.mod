@@ -1,3 +1,3 @@
-module github.com/stuart-warren/localpod
+module github.com/bottlerocketlabs/localpod
 
 go 1.15

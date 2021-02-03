@@ -16,6 +16,11 @@ const (
 	DefaultContainerEntrypoint = "/bin/sh"
 	DefaultContainerCommand    = "echo Container started ; trap \"exit 0\" 15; while sleep 1 & wait $!; do :; done"
 	DefaultContainerHostname   = "localpod"
+	configSHA1EnvKey           = "LOCALPOD_CONFIG_SHA1"
+)
+
+var (
+	ErrExistsButDifferent = fmt.Errorf("container exists, but does not match configuration")
 )
 
 func HasDocker() bool {
@@ -36,7 +41,7 @@ func envToDockerArgs(env map[string]string) []string {
 	var args []string
 	for k, v := range env {
 		args = append(args, "--env")
-		args = append(args, fmt.Sprintf("%s=%q", k, v))
+		args = append(args, fmt.Sprintf("%s=%s", k, v))
 	}
 	return args
 }
@@ -66,6 +71,9 @@ func buildCreateArgs(name string, cfg *config.DevContainer) []string {
 	args = append(args, "--hostname", DefaultContainerHostname)
 	args = append(args, "--user", cfg.ContainerUser)
 	args = append(args, envToDockerArgs(cfg.ContainerEnv)...)
+	args = append(args, envToDockerArgs(map[string]string{
+		configSHA1EnvKey: cfg.SHA1(),
+	})...)
 	args = append(args, mountsToDockerArgs(cfg.Mounts)...)
 	if cfg.WorkspaceMount != "" {
 		args = append(args, "--mount", cfg.WorkspaceMount)
@@ -93,6 +101,13 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 		fmt.Printf("DEBUG: container already exists\n")
 		return c, nil
 	}
+	if err == ErrExistsButDifferent {
+		fmt.Printf("DEBUG: container already exists, but doesnt match configuration. Rebuilding\n")
+		err := c.Rm()
+		if err != nil {
+			return c, fmt.Errorf("failed to remove existing container: %w", err)
+		}
+	}
 	fmt.Printf("DEBUG: inpect: %s\n", err)
 	args := expandEnvArgs(buildCreateArgs(name, cfg), env)
 	fmt.Printf("DEBUG: args for create: %v\n", args)
@@ -105,7 +120,10 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 }
 
 type containerInspect struct {
-	ID string `json:"Id"`
+	ID     string `json:"Id"`
+	Config struct {
+		Env []string `json:"Env"`
+	} `json:"Config"`
 }
 
 func (c *Container) Exists(name string) (string, error) {
@@ -120,6 +138,13 @@ func (c *Container) Exists(name string) (string, error) {
 	}
 	if len(inspect) != 1 {
 		return "", fmt.Errorf("unexpected number of inspect entries: %d", len(inspect))
+	}
+	expectedSHA1 := c.Config.SHA1()
+	inspectEnv := config.NewEnv(inspect[0].Config.Env)
+	inspectSHA1 := inspectEnv.Get(configSHA1EnvKey)
+	if inspectSHA1 != expectedSHA1 {
+		fmt.Printf("DEBUG: expected: %s, inspected: %s\n", expectedSHA1, inspectSHA1)
+		return inspect[0].ID, ErrExistsButDifferent
 	}
 	return inspect[0].ID, nil
 }
@@ -222,6 +247,14 @@ func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
 
 func (c *Container) Stop() error {
 	_, err := exec.Command("docker", "stop", c.Name).Output()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
+}
+
+func (c *Container) Rm() error {
+	_, err := exec.Command("docker", "rm", "-f", c.ID).Output()
 	if err != nil {
 		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
 	}

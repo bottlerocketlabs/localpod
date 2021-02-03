@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -108,4 +110,11 @@ func DevContainerFromEnv(env Env) (*DevContainer, error) {
 		dc.ContainerEnv["DOTFILES_REPO"] = dotfiles
 	}
 	return &dc, nil
+}
+
+// SHA1 returns the hash with base64 encoding for the configuration
+func (cfg *DevContainer) SHA1() string {
+	b, _ := json.Marshal(&cfg)
+	configHash := sha1.Sum(b)
+	return base64.URLEncoding.EncodeToString(configHash[:])
 }

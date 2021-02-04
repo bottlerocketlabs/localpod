@@ -28,7 +28,6 @@ type DevContainer struct {
 	RunArgs         []string          `json:"runArgs"`
 	OverrideCommand bool              `json:"overrideCommand"`
 	ShutdownAction  ShutdownAction    `json:"shutdownAction"`
-	ExecCommand     []string          `json:"execCommand"`
 }
 
 // type DevContainerBuild struct {
@@ -67,12 +66,11 @@ func (sa *ShutdownAction) UnmarshalJSON(b []byte) error {
 
 const (
 	DefaultName            = "localpod"
-	DefaultImage           = "docker.io/stuartwarren/localpod-base:0.1"
+	DefaultImage           = "docker.io/bottlerocketlabs/localpod-base:latest"
 	DefaultWorkspaceMount  = "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
 	DefaultWorkspaceFolder = "/workspace"
 	DefaultRemoteUser      = "dev"
 	DefaultContainerUser   = "root"
-	DefaultExecCommand     = "/bin/sh"
 )
 
 func DefaultDevContainer() DevContainer {
@@ -89,7 +87,6 @@ func DefaultDevContainer() DevContainer {
 		RunArgs:         []string{},
 		OverrideCommand: true,
 		ShutdownAction:  StopContainer,
-		ExecCommand:     []string{DefaultExecCommand},
 	}
 }
 

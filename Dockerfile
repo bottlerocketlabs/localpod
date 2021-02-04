@@ -11,6 +11,7 @@ RUN apt update && \
     bash \
     ca-certificates \
     curl \
+    docker.io \
     git \
     sudo \
     tmux \
@@ -20,6 +21,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/* && \
     adduser --home /home/$UNAME --gecos "" --disabled-password $UNAME && \
     usermod -aG sudo $UNAME && \
+    usermod -aG docker $UNAME && \
     echo "$UNAME  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$UNAME
 USER $UNAME
 WORKDIR /home/$UNAME

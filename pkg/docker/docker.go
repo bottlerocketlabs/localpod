@@ -50,7 +50,7 @@ func mountsToDockerArgs(mounts []string) []string {
 	var args []string
 	for _, m := range mounts {
 		args = append(args, "--mount")
-		args = append(args, fmt.Sprintf("%q", m))
+		args = append(args, m)
 	}
 	return args
 }
@@ -149,9 +149,9 @@ func (c *Container) Exists(name string) (string, error) {
 	return inspect[0].ID, nil
 }
 
-var setupScript = `#!/bin/sh
+var (
+	setupScript = `#!/bin/sh
 set -e
-
 adduser --home /home/{{.Username}} --gecos '' --disabled-password {{.Username}} || true
 addgroup sudo || true
 addgroup {{.Username}} sudo || true
@@ -164,44 +164,76 @@ if command -v apt-get; then
 	apt-get update && apt-get install -y --no-install-recommends sudo
 fi
 `
+	startScript = `#!/bin/sh
+# run the users default login shell
+$(awk -F: -v user="{{.Username}}" '$1 == user {print $NF}' /etc/passwd) --login
+`
+	startCommand = "/start"
+)
 
-type SetupScriptParams struct {
+type TemplateScriptParams struct {
 	Username string
 }
 
-func (c *Container) Setup() error {
-	tmpl, err := template.New("setup").Parse(setupScript)
+func (c *Container) AddScript(name string, dstPath string, templatedContent string) error {
+	tmpl, err := template.New(name).Parse(templatedContent)
 	if err != nil {
-		return fmt.Errorf("could not parse setupScript template: %w", err)
+		return fmt.Errorf("could not parse %s template: %w", name, err)
 	}
 	tmp := os.TempDir()
-	f, err := os.Create(filepath.Join(tmp, "setup.sh"))
+	scriptPath := filepath.Join(tmp, name)
+	f, err := os.Create(scriptPath)
 	if err != nil {
 		return fmt.Errorf("could not create temp file")
 	}
 	defer os.Remove(f.Name())
-	params := SetupScriptParams{
+	params := TemplateScriptParams{
 		Username: c.Config.RemoteUser,
 	}
 	err = tmpl.Execute(f, params)
 	if err != nil {
-		return fmt.Errorf("could not execute setupScript template: %w", err)
+		return fmt.Errorf("could not execute %s template: %w", name, err)
 	}
-	f.Sync()
-	_, err = exec.Command("docker", "cp", f.Name(), c.Name+":/tmp/setup.sh").Output()
+	err = f.Sync()
+	if err != nil {
+		return fmt.Errorf("could not sync %s to disk: %w", name, err)
+	}
+	_, err = exec.Command("docker", "cp", f.Name(), c.Name+":"+dstPath).Output()
 	if err != nil {
 		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
 	}
-	args := []string{"chmod", "+x", "/tmp/setup.sh"}
+	args := []string{"chmod", "+x", dstPath}
 	err = c.RunCommand(args)
 	if err != nil {
-		return fmt.Errorf("could make setupScript executable: %w", err)
+		return fmt.Errorf("could make %s executable: %w", dstPath, err)
 	}
-	fmt.Printf("DEBUG: preparing container for setup\n")
-	args = []string{"/tmp/setup.sh"}
-	err = c.RunCommand(args)
+	return nil
+}
+
+func (c *Container) RunScript(cmd string, args ...string) error {
+	command := []string{cmd}
+	command = append(command, args...)
+	err := c.RunCommand(command)
 	if err != nil {
-		return fmt.Errorf("could run setupScript: %w", err)
+		return fmt.Errorf("could run %s: %w", command, err)
+	}
+	return nil
+}
+
+func (c *Container) Setup() error {
+	fmt.Printf("DEBUG: preparing container for setup\n")
+	err := c.AddScript("setup.sh", "/tmp/setup.sh", setupScript)
+	if err != nil {
+		return fmt.Errorf("could not create setup.sh: %w", err)
+	}
+	err = c.AddScript("start.sh", startCommand, startScript)
+	if err != nil {
+		return fmt.Errorf("could not create %s: %w", startCommand, err)
+	}
+	fmt.Printf("DEBUG: running setup script\n")
+	err = c.RunScript("/tmp/setup.sh")
+	if err != nil {
+		return fmt.Errorf("failed to run setup.sh script: %w", err)
 	}
 	return nil
 }
@@ -232,7 +264,7 @@ func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
 	args = append(args, "--user", c.Config.RemoteUser)
 	args = append(args, "--workdir", c.Config.WorkspaceFolder)
 	args = append(args, c.Name)
-	args = append(args, c.Config.ExecCommand...)
+	args = append(args, startCommand)
 	fmt.Printf("DEBUG: args for exec: %v\n", args)
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = stderr

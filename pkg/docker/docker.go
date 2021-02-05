@@ -55,6 +55,15 @@ func mountsToDockerArgs(mounts []string) []string {
 	return args
 }
 
+func buildArgsToDockerArgs(buildArgs map[string]string) []string {
+	var args []string
+	for k, v := range buildArgs {
+		args = append(args, "--build-arg")
+		args = append(args, fmt.Sprintf("%s=%s", k, v))
+	}
+	return args
+}
+
 func expandEnvArgs(args []string, env config.Env) []string {
 	var out []string
 	for _, e := range args {
@@ -83,11 +92,50 @@ func buildCreateArgs(name string, cfg *config.DevContainer) []string {
 	if cfg.OverrideCommand {
 		args = append(args, "--entrypoint", DefaultContainerEntrypoint)
 	}
-	args = append(args, cfg.Image) // Image
+	image := cfg.Image
+	if cfg.Build.Dockerfile != "" && cfg.Build.Target != "" {
+		image = cfg.Build.Target //assume was built successfully
+	}
+	args = append(args, image) // Image
 	if cfg.OverrideCommand {
 		args = append(args, "-c", DefaultContainerCommand)
 	}
 	return args
+}
+
+func BuildImage(cfg *config.DevContainer, stdout, stderr io.Writer) error {
+	if cfg.Build.Dockerfile == "" {
+		return nil
+	}
+	if cfg.Build.Context == "" {
+		return fmt.Errorf("build.dockerfile set, but not build.context")
+	}
+	if cfg.Build.Target == "" && cfg.Image == "" {
+		return fmt.Errorf("build.dockerfile set, but not build.target or image")
+	}
+	buildTarget := cfg.Build.Target
+	if buildTarget == "" {
+		buildTarget = cfg.Image
+	}
+	_, err := os.Stat(cfg.Build.Dockerfile)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("configured build.dockerfile does not exist: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check for existance of build.dockerfile")
+	}
+	args := []string{"build", "--tag", buildTarget, "--file", cfg.Build.Dockerfile}
+	args = append(args, buildArgsToDockerArgs(cfg.Build.Args)...)
+	args = append(args, cfg.Build.Context)
+	fmt.Printf("DEBUG: Building image with: %s\n", args)
+	cmd := exec.Command("docker", args...)
+	cmd.Stderr = stderr
+	cmd.Stdout = stdout
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
+	}
+	return nil
 }
 
 func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Container, error) {

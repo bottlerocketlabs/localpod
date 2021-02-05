@@ -33,6 +33,9 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if err != nil {
 		return fmt.Errorf("could not get current working directory: %w", err)
 	}
+	if !docker.HasDocker() {
+		return fmt.Errorf("could not find 'docker' on PATH")
+	}
 	env.Set("localWorkspaceFolder", wd)
 	var cfg *config.DevContainer
 	dotConfig := path.Join(wd, ".devcontainer.json")
@@ -58,10 +61,11 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if err != nil {
 		return fmt.Errorf("could not process config file %s: %w", dotConfig, err)
 	}
-
-	if !docker.HasDocker() {
-		return fmt.Errorf("could not find 'docker' on PATH")
+	err = docker.BuildImage(cfg, stdout, stderr)
+	if err != nil {
+		return fmt.Errorf("could not build image from configured dockerfile: %w", err)
 	}
+
 	container, err := docker.CreateContainer(cfg.Name, env, cfg)
 	if err != nil {
 		return fmt.Errorf("could not create container: %w", err)

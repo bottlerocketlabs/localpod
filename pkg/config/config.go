@@ -16,7 +16,7 @@ type DevContainer struct {
 	Image string `json:"image"`
 	// Dockerfile      string            `json:"dockerfile"`
 	// Context         string            `json:"context"`
-	// Build           DevContainerBuild `json:"build,omitempty"`
+	Build DevContainerBuild `json:"build,omitempty"`
 	// AppPort         []string          `json:"appPort"`
 	ContainerEnv    map[string]string `json:"containerEnv"`
 	RemoteEnv       map[string]string `json:"remoteEnv"`
@@ -30,12 +30,12 @@ type DevContainer struct {
 	ShutdownAction  ShutdownAction    `json:"shutdownAction"`
 }
 
-// type DevContainerBuild struct {
-// 	Dockerfile string            `json:"dockerfile"`
-// 	Context    string            `json:"context"`
-// 	Args       map[string]string `json:"args"`
-// 	Target     string            `json:"target"`
-// }
+type DevContainerBuild struct {
+	Dockerfile string            `json:"dockerfile"`
+	Context    string            `json:"context"`
+	Args       map[string]string `json:"args"`
+	Target     string            `json:"target"`
+}
 
 type ShutdownAction string
 

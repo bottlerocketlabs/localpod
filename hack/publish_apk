@@ -1,0 +1,5 @@
+#!/bin/bash
+artifact_path=$1
+artifact_name=$2
+arch=$3
+curl -H 'X-JFrog-Art-Api:${ARTIFACTORY_SECRET}' -sT ${artifact_path} "https://bottlerocketlabs.jfrog.io/artifactory/alpine/edge/main/${arch}/${artifact_name}"

@@ -51,6 +51,13 @@ publishers:
   env:
   - ARTIFACTORY_USERNAME={{ .Env.ARTIFACTORY_USERNAME }}
   - ARTIFACTORY_SECRET={{ .Env.ARTIFACTORY_SECRET }}
+- name: apk
+  ids:
+  - apk
+  cmd: hack/publish_apk {{ abs .ArtifactPath }} {{ .ArtifactName }} {{ .Arch }}
+  env:
+  - ARTIFACTORY_USERNAME={{ .Env.ARTIFACTORY_USERNAME }}
+  - ARTIFACTORY_SECRET={{ .Env.ARTIFACTORY_SECRET }}
 brews:
 - name: localpod
   tap:

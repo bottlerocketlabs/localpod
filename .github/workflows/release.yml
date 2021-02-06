@@ -25,3 +25,5 @@ jobs:
       env:
         HOMEBREW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        ARTIFACTORY_USERNAME: ${{secrets.ARTIFACTORY_USERNAME}}
+        ARTIFACTORY_SECRET: ${{secrets.ARTIFACTORY_SECRET}}

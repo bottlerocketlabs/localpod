@@ -47,7 +47,10 @@ publishers:
 - name: deb
   ids:
   - deb
-  cmd: curl -T {{ abs .ArtifactPath }} -u{{ .Env.UPLOAD_DEB_USERNAME }}:{{ .Env.UPLOAD_DEB_SECRET }} 'https://bottlerocketlabs.jfrog.io/artifactory/deb/pool/{{ .ArtifactName }};deb.distribution=all;deb.component=main;deb.architecture={{ .Arch }}'
+  cmd: hack/publish_deb {{ abs .ArtifactPath }} {{ .ArtifactName }} {{ .Arch }}
+  env:
+  - ARTIFACTORY_USERNAME={{ .Env.ARTIFACTORY_USERNAME }}
+  - ARTIFACTORY_SECRET={{ .Env.ARTIFACTORY_SECRET }}
 brews:
 - name: localpod
   tap:

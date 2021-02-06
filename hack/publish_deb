@@ -1,0 +1,5 @@
+#!/bin/bash
+artifact_path=$1
+artifact_name=$2
+arch=$3
+curl -Ts ${artifact_path} -u${ARTIFACTORY_USERNAME}:${ARTIFACTORY_SECRET} "https://bottlerocketlabs.jfrog.io/artifactory/deb/pool/${artifact_name};deb.distribution=all;deb.component=main;deb.architecture=${arch}"

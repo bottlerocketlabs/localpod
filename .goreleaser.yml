@@ -51,8 +51,16 @@ brews:
   install: |-
     bin.install "localpod"
 nfpms:
-- package_name: localpod
+- id: deb
+  package_name: localpod
+  formats:
+  - deb
+- id: apk
+  package_name: localpod
   formats:
   - apk
-  - deb
-  - rpm
+uploads:
+- name: deb
+  mode: binary
+  target: "https://bottlerocketlabs.jfrog.io/artifactory/deb/pool/{{ .ArtifactName }};deb.distribution=all;deb.component=main;deb.architecture={{ .Arch }}"
+  custom_artifact_name: true

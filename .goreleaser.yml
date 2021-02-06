@@ -34,6 +34,20 @@ changelog:
     - Merge pull request
     - Merge branch
     - go mod tidy
+nfpms:
+- id: deb
+  package_name: localpod
+  formats:
+  - deb
+- id: apk
+  package_name: localpod
+  formats:
+  - apk
+uploads:
+- name: deb
+  mode: binary
+  target: "https://bottlerocketlabs.jfrog.io/artifactory/deb/pool/{{ .ArtifactName }};deb.distribution=all;deb.component=main;deb.architecture={{ .Arch }}"
+  custom_artifact_name: true
 brews:
 - name: localpod
   tap:
@@ -50,17 +64,3 @@ brews:
   - name: go
   install: |-
     bin.install "localpod"
-nfpms:
-- id: deb
-  package_name: localpod
-  formats:
-  - deb
-- id: apk
-  package_name: localpod
-  formats:
-  - apk
-uploads:
-- name: deb
-  mode: binary
-  target: "https://bottlerocketlabs.jfrog.io/artifactory/deb/pool/{{ .ArtifactName }};deb.distribution=all;deb.component=main;deb.architecture={{ .Arch }}"
-  custom_artifact_name: true

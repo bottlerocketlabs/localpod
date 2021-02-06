@@ -200,7 +200,9 @@ func (c *Container) Exists(name string) (string, error) {
 var (
 	setupScript = `#!/bin/sh
 set -e
+# ensure user is created
 adduser --home /home/{{.Username}} --gecos '' --disabled-password {{.Username}} || true
+# setup user for passwordless sudo
 addgroup sudo || true
 addgroup {{.Username}} sudo || true
 mkdir -p /etc/sudoers.d
@@ -211,6 +213,9 @@ fi
 if command -v apt-get; then
 	apt-get update && apt-get install -y --no-install-recommends sudo
 fi
+# create dir for homebrew
+mkdir -p /home/linuxbrew/.linuxbrew/Homebrew
+chown -R {{.Username}} /home/linuxbrew
 `
 	startScript = `#!/bin/sh
 # run the users default login shell

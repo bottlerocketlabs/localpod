@@ -50,3 +50,9 @@ brews:
   - name: go
   install: |-
     bin.install "localpod"
+nfpms:
+- package_name: localpod
+  formats:
+  - apk
+  - deb
+  - rpm

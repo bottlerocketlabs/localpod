@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -10,9 +10,15 @@ func TestEnvToArgs(t *testing.T) {
 		"KEY1": "val1",
 		"KEY2": "val2",
 	}
-	expected := []string{"--env", "KEY1=val1", "--env", "KEY2=val2"}
+	expected := []string{"--env", "=", "--env", "="}
 	args := envToDockerArgs(env)
-	if !reflect.DeepEqual(expected, args) {
-		t.Errorf("got: %v, expected: %v", args, expected)
+	if len(args) != len(expected) {
+		t.Errorf("got a length of %d, expected: %d", len(args), len(expected))
+	}
+	for i, v := range expected {
+		if !strings.Contains(args[i], v) {
+			t.Errorf("got: %v, expected: %v", args, expected)
+			t.Fail()
+		}
 	}
 }

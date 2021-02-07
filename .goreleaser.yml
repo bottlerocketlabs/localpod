@@ -21,7 +21,7 @@ brews:
     bin.install "localpod"
 builds:
 - id: *name
-  main: "./cmd/localpod"
+  main: "./main.go"
   binary: *name
   env:
   - CGO_ENABLED=0

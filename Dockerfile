@@ -5,7 +5,9 @@ RUN GO111MODULE=on go get -v github.com/bottlerocketlabs/dotfiles/cmd/dotfiles
 RUN GO111MODULE=on go get -v github.com/bottlerocketlabs/remote-pbcopy/cmd/rpbcopy
 
 FROM ubuntu:20.04
-ENV UNAME="dev"
+ARG USERNAME="dev"
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
 RUN apt update && \
     apt install -y --no-install-recommends \
     bash \
@@ -19,12 +21,13 @@ RUN apt update && \
     wget \
     zsh && \
     rm -rf /var/lib/apt/lists/* && \
-    adduser --home /home/$UNAME --gecos "" --disabled-password $UNAME && \
-    usermod -aG sudo $UNAME && \
-    usermod -aG docker $UNAME && \
-    echo "$UNAME  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/$UNAME
-USER $UNAME
-WORKDIR /home/$UNAME
+    addgroup -gid ${USER_GID} ${USERNAME} && \
+    adduser --home /home/${USERNAME} --uid ${USER_UID} --gid ${USER_GID} --gecos "" --disabled-password ${USERNAME} && \
+    usermod -aG sudo ${USERNAME} && \
+    usermod -aG docker ${USERNAME} && \
+    echo "${USERNAME}  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/${USERNAME}
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
 COPY --from=builder /go/bin/pair /bin
 COPY --from=builder /go/bin/rpbcopy /bin
 COPY --from=builder /go/bin/dotfiles /bin

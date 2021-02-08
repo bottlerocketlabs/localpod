@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"text/template"
 
@@ -201,7 +202,8 @@ var (
 	setupScript = `#!/bin/sh
 set -e
 # ensure user is created
-adduser --home /home/{{.Username}} --gecos '' --disabled-password {{.Username}} || true
+adduser --home /home/{{.Username}} --gecos '' --disabled-password -u {{ .UID }} {{.Username}} || true
+usermod --uid {{ .UID }} {{.Username}} || true
 # setup user for passwordless sudo
 addgroup sudo || true
 addgroup {{.Username}} sudo || true
@@ -225,6 +227,7 @@ $(awk -F: -v user="{{.Username}}" '$1 == user {print $NF}' /etc/passwd) --login
 )
 
 type TemplateScriptParams struct {
+	UID      string
 	Username string
 }
 
@@ -240,7 +243,12 @@ func (c *Container) AddScript(name string, dstPath string, templatedContent stri
 		return fmt.Errorf("could not create temp file")
 	}
 	defer os.Remove(f.Name())
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("could not get current user details")
+	}
 	params := TemplateScriptParams{
+		UID:      currentUser.Uid,
 		Username: c.Config.RemoteUser,
 	}
 	err = tmpl.Execute(f, params)

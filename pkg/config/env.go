@@ -9,6 +9,7 @@ type Env struct {
 
 // Get an environment variable by key, or blank string if missing
 func (e *Env) Get(key string) string {
+	key = strings.ReplaceAll(key, "localEnv:", "")
 	value, ok := e.m[key]
 	if !ok {
 		return ""

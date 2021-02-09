@@ -56,11 +56,11 @@ func mountsToDockerArgs(mounts []string) []string {
 	return args
 }
 
-func buildArgsToDockerArgs(buildArgs map[string]string) []string {
+func buildArgsToDockerArgs(buildArgs map[string]string, env config.Env) []string {
 	var args []string
 	for k, v := range buildArgs {
 		args = append(args, "--build-arg")
-		args = append(args, fmt.Sprintf("%s=%s", k, v))
+		args = append(args, fmt.Sprintf("%s=%s", k, os.Expand(v, env.Get)))
 	}
 	return args
 }
@@ -104,7 +104,7 @@ func buildCreateArgs(name string, cfg *config.DevContainer) []string {
 	return args
 }
 
-func BuildImage(cfg *config.DevContainer, stdout, stderr io.Writer) error {
+func BuildImage(cfg *config.DevContainer, env config.Env, stdout, stderr io.Writer) error {
 	if cfg.Build.Dockerfile == "" {
 		return nil
 	}
@@ -126,7 +126,7 @@ func BuildImage(cfg *config.DevContainer, stdout, stderr io.Writer) error {
 		return fmt.Errorf("failed to check for existance of build.dockerfile")
 	}
 	args := []string{"build", "--tag", buildTarget, "--file", cfg.Build.Dockerfile}
-	args = append(args, buildArgsToDockerArgs(cfg.Build.Args)...)
+	args = append(args, buildArgsToDockerArgs(cfg.Build.Args, env)...)
 	args = append(args, cfg.Build.Context)
 	fmt.Printf("DEBUG: Building image with: %s\n", args)
 	cmd := exec.Command("docker", args...)

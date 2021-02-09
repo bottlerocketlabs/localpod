@@ -8,6 +8,7 @@ FROM ubuntu:20.04
 ARG USERNAME="dev"
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
+ARG DOTFILES_REPO=""
 RUN apt update && \
     apt install -y --no-install-recommends \
     bash \
@@ -23,6 +24,7 @@ RUN apt update && \
     rm -rf /var/lib/apt/lists/* && \
     addgroup -gid ${USER_GID} ${USERNAME} && \
     adduser --home /home/${USERNAME} --uid ${USER_UID} --gid ${USER_GID} --gecos "" --disabled-password ${USERNAME} && \
+    chsh --shell /usr/bin/zsh ${USERNAME} && \
     usermod -aG sudo ${USERNAME} && \
     usermod -aG docker ${USERNAME} && \
     echo "${USERNAME}  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/${USERNAME}
@@ -31,6 +33,6 @@ WORKDIR /home/${USERNAME}
 COPY --from=builder /go/bin/pair /bin
 COPY --from=builder /go/bin/rpbcopy /bin
 COPY --from=builder /go/bin/dotfiles /bin
-# ENV DOTFILES_REPO= # FIXME
+RUN /bin/dotfiles ${DOTFILES_REPO}
 ADD entrypoint /bin/entrypoint
 ENTRYPOINT [ "/bin/entrypoint" ]

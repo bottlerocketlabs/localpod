@@ -31,10 +31,10 @@ type DevContainer struct {
 }
 
 type DevContainerBuild struct {
-	Dockerfile string            `json:"dockerfile"`
-	Context    string            `json:"context"`
-	Args       map[string]string `json:"args"`
-	Target     string            `json:"target"`
+	Dockerfile string            `json:"dockerfile,omitempty"`
+	Context    string            `json:"context,omitempty"`
+	Args       map[string]string `json:"args,omitempty"`
+	Target     string            `json:"target,omitempty"`
 }
 
 type ShutdownAction string

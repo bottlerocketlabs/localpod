@@ -61,6 +61,10 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if err != nil {
 		return fmt.Errorf("could not process config file %s: %w", dotConfig, err)
 	}
+	err = cfg.AddConfigFromEnv(env)
+	if err != nil {
+		return fmt.Errorf("could not load environment into config: %w", err)
+	}
 	err = docker.BuildImage(cfg, env, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("could not build image from configured dockerfile: %w", err)

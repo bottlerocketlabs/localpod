@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // From https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_devcontainerjson-properties
@@ -98,14 +99,28 @@ func DevContainerFromFile(r io.Reader) (*DevContainer, error) {
 	return &dc, err
 }
 
-func DevContainerFromEnv(env Env) (*DevContainer, error) {
-	dc := DefaultDevContainer()
+func (dc *DevContainer) AddConfigFromEnv(env Env) error {
 	if image := env.Get("LOCALPOD_IMAGE"); image != "" {
 		dc.Image = image
 	}
 	if dotfiles := env.Get("DOTFILES_REPO"); dotfiles != "" {
 		dc.ContainerEnv["DOTFILES_REPO"] = dotfiles
 	}
+	if mounts := env.Get("LOCALPOD_MOUNTS"); mounts != "" {
+		dc.Mounts = append(dc.Mounts, strings.Split(mounts, ";")...)
+	}
+	if envVars := env.Get("LOCALPOD_ENV_VARS"); envVars != "" {
+		ev := NewEnv(strings.Split(envVars, ";"))
+		for k, v := range ev.m {
+			dc.RemoteEnv[k] = v
+		}
+	}
+	return nil
+}
+
+func DevContainerFromEnv(env Env) (*DevContainer, error) {
+	dc := DefaultDevContainer()
+	dc.AddConfigFromEnv(env)
 	return &dc, nil
 }
 

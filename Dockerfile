@@ -30,9 +30,9 @@ RUN apt update && \
     echo "${USERNAME}  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/${USERNAME}
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+RUN /bin/dotfiles ${DOTFILES_REPO}
 COPY --from=builder /go/bin/pair /bin
 COPY --from=builder /go/bin/rpbcopy /bin
 COPY --from=builder /go/bin/dotfiles /bin
-RUN /bin/dotfiles ${DOTFILES_REPO}
 ADD entrypoint /bin/entrypoint
 ENTRYPOINT [ "/bin/entrypoint" ]

@@ -31,7 +31,6 @@ RUN apt update && \
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 COPY --from=builder /go/bin/dotfiles /bin
-RUN /bin/dotfiles ${DOTFILES_REPO}
 COPY --from=builder /go/bin/pair /bin
 COPY --from=builder /go/bin/rpbcopy /bin
 ADD entrypoint /bin/entrypoint

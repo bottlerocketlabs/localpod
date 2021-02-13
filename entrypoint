@@ -12,7 +12,6 @@ if [[ "$DOTFILES_REPO" == "unset" ]]; then
     exit 1
 fi
 
-[[ ! -d "${DOTFILES_DIR}" ]] && git clone ${DOTFILES_REPO} ${DOTFILES_DIR}
-${DOTFILES_DIR}/install
+/bin/dotfiles ${DOTFILES_REPO} 
 
 tmux new -A -s 1 ${COMMAND}

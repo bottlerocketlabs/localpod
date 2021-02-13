@@ -1,9 +1,3 @@
-FROM golang:1.15.6 as builder
-WORKDIR /go/src/
-RUN GO111MODULE=on go get -v github.com/bottlerocketlabs/pair/cmd/pair
-RUN GO111MODULE=on go get -v github.com/bottlerocketlabs/dotfiles/cmd/dotfiles
-RUN GO111MODULE=on go get -v github.com/bottlerocketlabs/remote-pbcopy/cmd/rpbcopy
-
 FROM ubuntu:20.04
 ARG USERNAME="dev"
 ARG USER_UID=1000
@@ -22,16 +16,13 @@ RUN apt update && \
     wget \
     zsh && \
     rm -rf /var/lib/apt/lists/* && \
+    curl 'https://installer-brl.herokuapp.com/dotfiles!!' | bash && \
     addgroup -gid ${USER_GID} ${USERNAME} && \
     adduser --home /home/${USERNAME} --uid ${USER_UID} --gid ${USER_GID} --gecos "" --disabled-password ${USERNAME} && \
-    chsh --shell /usr/bin/zsh ${USERNAME} && \
     usermod -aG sudo ${USERNAME} && \
     usermod -aG docker ${USERNAME} && \
     echo "${USERNAME}  ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/${USERNAME}
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-COPY --from=builder /go/bin/dotfiles /bin
-COPY --from=builder /go/bin/pair /bin
-COPY --from=builder /go/bin/rpbcopy /bin
 ADD entrypoint /bin/entrypoint
 ENTRYPOINT [ "/bin/entrypoint" ]

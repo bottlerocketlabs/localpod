@@ -129,7 +129,9 @@ func BuildImage(cfg *config.DevContainer, env config.Env, stdout, stderr io.Writ
 	args := []string{"build", "--pull", "--tag", buildTarget, "--file", cfg.Build.Dockerfile}
 	args = append(args, buildArgsToDockerArgs(cfg.Build.Args, env)...)
 	args = append(args, cfg.Build.Context)
-	fmt.Printf("DEBUG: Building image with: %s\n", args)
+	if env.Get("LOCALPOD_DEBUG") == "true" {
+		fmt.Printf("DEBUG: Building image with: %s\n", args)
+	}
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = stderr
 	cmd.Stdout = stdout
@@ -160,7 +162,9 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 	}
 	fmt.Printf("DEBUG: inpect: %s\n", err)
 	args := expandEnvArgs(buildCreateArgs(name, cfg), env)
-	fmt.Printf("DEBUG: args for create: %v\n", args)
+	if env.Get("LOCALPOD_DEBUG") == "true" {
+		fmt.Printf("DEBUG: args for create: %v\n", args)
+	}
 	out, err := exec.Command("docker", args...).Output()
 	if err != nil {
 		return c, fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)

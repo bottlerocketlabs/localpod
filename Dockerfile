@@ -16,7 +16,7 @@ RUN apt update && \
     wget \
     zsh && \
     rm -rf /var/lib/apt/lists/* && \
-    curl 'https://installer-brl.herokuapp.com/dotfiles!!' | bash && \
+    curl 'https://installer-brl.herokuapp.com/dotfiles@v0.1.3!!' | bash && \
     addgroup -gid ${USER_GID} ${USERNAME} && \
     adduser --home /home/${USERNAME} --uid ${USER_UID} --gid ${USER_GID} --gecos "" --disabled-password ${USERNAME} && \
     usermod -aG sudo ${USERNAME} && \

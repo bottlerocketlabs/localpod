@@ -125,7 +125,7 @@ func BuildImage(cfg *config.DevContainer, env config.Env, stdout, stderr io.Writ
 	if err != nil {
 		return fmt.Errorf("failed to check for existance of build.dockerfile")
 	}
-	args := []string{"build", "--tag", buildTarget, "--file", cfg.Build.Dockerfile}
+	args := []string{"build", "--pull", "--tag", buildTarget, "--file", cfg.Build.Dockerfile}
 	args = append(args, buildArgsToDockerArgs(cfg.Build.Args, env)...)
 	args = append(args, cfg.Build.Context)
 	fmt.Printf("DEBUG: Building image with: %s\n", args)
@@ -323,6 +323,7 @@ func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
 	args = append(args, "--tty", "--interactive")
 	args = append(args, envToDockerArgs(c.Config.RemoteEnv)...)
 	args = append(args, "--user", c.Config.RemoteUser)
+	args = append(args, "--pull", "always")
 	args = append(args, "--workdir", c.Config.WorkspaceFolder)
 	args = append(args, c.Name)
 	args = append(args, startCommand)

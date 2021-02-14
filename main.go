@@ -83,7 +83,7 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 	if err != nil {
 		return fmt.Errorf("could not setup container: %w", err)
 	}
-	err = container.Exec(stdin, stdout, stderr)
+	err = container.Exec(env, stdin, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("could not exec container: %w", err)
 	}

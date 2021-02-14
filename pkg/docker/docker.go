@@ -165,6 +165,7 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 	if env.Get("LOCALPOD_DEBUG") == "true" {
 		fmt.Printf("DEBUG: args for create: %v\n", args)
 	}
+	fmt.Printf("Creating container, pulling latest image if needed\n")
 	out, err := exec.Command("docker", args...).Output()
 	if err != nil {
 		return c, fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
@@ -322,7 +323,7 @@ func (c *Container) Start() error {
 	return nil
 }
 
-func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
+func (c *Container) Exec(env config.Env, stdin io.Reader, stdout, stderr io.Writer) error {
 	var args []string
 	args = append(args, "exec")
 	args = append(args, "--tty", "--interactive")
@@ -331,7 +332,10 @@ func (c *Container) Exec(stdin io.Reader, stdout, stderr io.Writer) error {
 	args = append(args, "--workdir", c.Config.WorkspaceFolder)
 	args = append(args, c.Name)
 	args = append(args, startCommand)
-	fmt.Printf("DEBUG: args for exec: %v\n", args)
+	if env.Get("LOCALPOD_DEBUG") == "true" {
+		fmt.Printf("DEBUG: args for exec: %v\n", args)
+	}
+	fmt.Printf("Entering container\n")
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = stderr
 	cmd.Stdout = stdout

@@ -224,6 +224,8 @@ fi
 # create dir for homebrew
 mkdir -p /home/linuxbrew/.linuxbrew/Homebrew
 chown -R {{.Username}} /home/linuxbrew
+# fix docker socket perms
+groupmod -g $(stat -c "%g" /var/run/docker.sock) docker || true
 `
 	startScript = `#!/bin/sh
 # run the users default login shell

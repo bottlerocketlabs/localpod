@@ -70,7 +70,7 @@ func Run(args []string, env config.Env, stdin io.Reader, stdout, stderr io.Write
 		return fmt.Errorf("could not build image from configured dockerfile: %w", err)
 	}
 
-	container, err := docker.CreateContainer(cfg.Name, env, cfg)
+	container, err := docker.CreateContainer(cfg.Name, env, cfg, stdout, stderr)
 	if err != nil {
 		return fmt.Errorf("could not create container: %w", err)
 	}

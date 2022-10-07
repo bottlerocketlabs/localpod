@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -142,7 +143,7 @@ func BuildImage(cfg *config.DevContainer, env config.Env, stdout, stderr io.Writ
 	return nil
 }
 
-func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Container, error) {
+func CreateContainer(name string, env config.Env, cfg *config.DevContainer, stdout, stderr io.Writer) (Container, error) {
 	c := Container{
 		Config: cfg,
 		Name:   name,
@@ -165,12 +166,16 @@ func CreateContainer(name string, env config.Env, cfg *config.DevContainer) (Con
 	if env.Get("LOCALPOD_DEBUG") == "true" {
 		fmt.Printf("DEBUG: args for create: %v\n", args)
 	}
-	fmt.Printf("Creating container, pulling latest image if needed\n")
-	out, err := exec.Command("docker", args...).Output()
+	fmt.Printf("Creating container, pulling latest image if needed (note: no progress bars)\n")
+	cmd := exec.Command("docker", args...)
+	cmd.Stderr = stderr
+	out := bytes.NewBuffer([]byte{})
+	cmd.Stdout = out
+	err = cmd.Run()
 	if err != nil {
 		return c, fmt.Errorf("%w - %s", err, err.(*exec.ExitError).Stderr)
 	}
-	c.ID = string(out)
+	c.ID = out.String()
 	return c, nil
 }
 

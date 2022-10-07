@@ -78,7 +78,7 @@ func buildCreateArgs(name string, cfg *config.DevContainer) []string {
 	args = append(args, "create")
 	args = append(args, "--tty", "--interactive")
 	args = append(args, "--name", name)
-	args = append(args, "--pull", "always")
+	args = append(args, "--pull", "missing")
 	args = append(args, "--hostname", DefaultContainerHostname)
 	args = append(args, "--user", cfg.ContainerUser)
 	args = append(args, envToDockerArgs(cfg.ContainerEnv)...)
@@ -226,10 +226,19 @@ mkdir -p /home/linuxbrew/.linuxbrew/Homebrew
 chown -R {{.Username}} /home/linuxbrew
 # fix docker socket perms
 groupmod -g $(stat -c "%g" /var/run/docker.sock) docker || true
+homedir=$( getent passwd "{{.Username}}" | cut -d: -f6 )
+mkdir -p "${homedir}/.ssh"
+chmod 0700 "${homedir}/.ssh"
+if [ -d "/.ssh" ]; then
+	cp -R /.ssh/* "${homedir}/.ssh/"
+	chmod 600 "${homedir}/.ssh/id_*" || true
+	chmod 644 "${homedir}/.ssh/id_*.pub" || true
+	chmod 644 "${homedir}/.ssh/config*" || true
+fi
 `
 	startScript = `#!/bin/sh
 # run the users default login shell
-$(awk -F: -v user="{{.Username}}" '$1 == user {print $NF}' /etc/passwd) --login
+eval $(ssh-agent -s); ssh-add; $(awk -F: -v user="{{.Username}}" '$1 == user {print $NF}' /etc/passwd) --login
 `
 	startCommand = "/start"
 )

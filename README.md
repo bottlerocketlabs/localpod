@@ -12,3 +12,7 @@ vscode and localpod both use `.devcontainer.json` - https://code.visualstudio.co
 
 * docker
 * a terminal
+
+## tips
+
+inside the container, file within `/.ssh/*` are copied into the users home directory and given the correct permissions, an ssh-agent is started and the default private key names are added.
